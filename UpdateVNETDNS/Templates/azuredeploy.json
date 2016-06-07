@@ -24,10 +24,12 @@
       "type": "string",
       "defaultValue": "192.168.89.0/24"
     },
+    /*
     "vnetwithDNSTemplateUri":
     {
     "type": "string"
     },
+    */
     "assetLocation":
     {
       "type": "string",
@@ -349,7 +351,7 @@
       "apiVersion": "2015-05-01-preview",
       "location": "[resourceGroup().location]"
     },
-    //-----
+    /*
     {
       "name": "UpdateVNetDNS",
       "type": "Microsoft.Resources/deployments",
@@ -394,7 +396,7 @@
         }
       }
     },
-
+    */
     //--------
     {
       "name": "[variables('DC1NicName')]",
@@ -458,5 +460,5 @@
         }
       }
     }
-  ]
-}
+    ]
+  }

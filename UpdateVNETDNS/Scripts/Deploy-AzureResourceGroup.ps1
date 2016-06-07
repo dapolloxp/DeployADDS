@@ -1,6 +1,7 @@
 ﻿#Requires -Version 3.0
 #Requires -Module AzureRM.Resources
 #Requires -Module Azure.Storage
+#Requires -Module AzureRM.Network
 
 Param(
     #[string] [Parameter(Mandatory=$true)] $ResourceGroupLocation,
@@ -15,14 +16,23 @@ Param(
 	[string] $SubscriptionName = 'Sandbox',
     [switch] $UploadArtifacts,
     [string] $StorageAccountName,
+	[string] $NetworkResourceGroup = 'VMSS-ILB-Linux',
+	[string] $virtualNetworkName = 'AzureUSNCVNet2',
+#	[string] $virtualNetworkAddressRange = '192.168.88.0/23',
+
+#	[string] $subnetName = 'dapolinuxsubnet',
+#	[string] $subnetRange = '192.168.89.0/24',
+	[array] $DNSServerAddress = @("192.168.89.223","192.168.1.219"),
     [string] $StorageContainerName = $ResourceGroupName.ToLowerInvariant() + '-stageartifacts',
     [string] $TemplateFile = '..\Templates\azuredeploy.json',
     [string] $TemplateParametersFile = '..\Templates\azuredeploy.parameters.json',
     [string] $ArtifactStagingDirectory = '..\bin\Debug\staging',
+	#[string] $networkTemplate = '..\Templates\vnet-with-dns-server.json',
     [string] $DSCSourceFolder = '..\DSC'
 )
 
 Import-Module Azure -ErrorAction SilentlyContinue
+Import-Module AzureRM.Network -ErrorAction SilentlyContinue
 
 Login-AzureRmAccount
 Select-AzureRmSubscription -SubscriptionName $SubscriptionName
@@ -37,6 +47,9 @@ Set-StrictMode -Version 3
 
 $OptionalParameters = New-Object -TypeName Hashtable
 $TemplateFile = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($PSScriptRoot, $TemplateFile))
+
+#$networkTemplate = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($PSScriptRoot, $networkTemplate))
+
 $TemplateParametersFile = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($PSScriptRoot, $TemplateParametersFile))
 
 if ($UploadArtifacts) {
@@ -131,7 +144,11 @@ New-AzureRmResourceGroupDeployment -Name ((Get-ChildItem $TemplateFile).BaseName
                                    -ResourceGroupName $ResourceGroupName `
                                    -TemplateFile $TemplateFile `
 								   -SASToken $SASToken `
-								   -vnetwithDNSTemplateUri $vnetwithDNSTemplateUri `
                                    -TemplateParameterFile $TemplateParametersFile `
                                    @OptionalParameters `
                                    -Force -Verbose
+
+# Setting VNET DNS Servers to use Active Directory 
+$VNET = get-AzureRmVirtualNetwork -ResourceGroupName $NetworkResourceGroup -Name $virtualNetworkName
+$VNET.DHCPOptions.DnsServers = $DNSServerAddress
+Set-AzureRmVirtualNetwork -VirtualNetwork $VNET
