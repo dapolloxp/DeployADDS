@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{151D2E53-A2C4-4D7D-83FE-D05416EBD58E}") = "UpdateVNETDNS", "UpdateVNETDNS\UpdateVNETDNS.deployproj", "{0948E1DC-5DD3-46B8-AF5F-E471663BD3C3}"
+Project("{151D2E53-A2C4-4D7D-83FE-D05416EBD58E}") = "HPCDCDeployment", "UpdateVNETDNS\HPCDCDeployment.deployproj", "{0948E1DC-5DD3-46B8-AF5F-E471663BD3C3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

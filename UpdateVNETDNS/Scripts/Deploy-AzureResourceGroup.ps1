@@ -119,6 +119,8 @@ $SASToken = New-AzureStorageContainerSASToken -container scripts -context $SC2 -
 
 Write-Output "SASToken: " $SASToken
 
+$vnetwithDNSTemplateUri = $SC2.BlobEndPoint + "scripts/vnet-with-dns-server.json" + $SASToken
+
 $SASToken = ConvertTo-SecureString $SASToken -AsPlainText -Force
 #$OptionalParameters.Add($ArtifactsLocationSasTokenName, $null)
 
@@ -129,6 +131,7 @@ New-AzureRmResourceGroupDeployment -Name ((Get-ChildItem $TemplateFile).BaseName
                                    -ResourceGroupName $ResourceGroupName `
                                    -TemplateFile $TemplateFile `
 								   -SASToken $SASToken `
+								   -vnetwithDNSTemplateUri $vnetwithDNSTemplateUri `
                                    -TemplateParameterFile $TemplateParametersFile `
                                    @OptionalParameters `
                                    -Force -Verbose
