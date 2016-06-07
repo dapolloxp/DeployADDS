@@ -1,0 +1,398 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters":
+  {
+    "dnsServers":
+    {
+      "type": "array",
+      "metadata":
+      {
+        "Description": "The DNS Servers of the NIC. Must be entered in the following format ['x.x.x.x','y.y.y.y']"
+      }
+    },
+    "domainName":
+    {
+      "type": "string",
+      "metadata":
+      {
+        "Description": "The FQDN of the AD Forest. e.g. Contoso.com"
+      }
+    },
+    "assetLocation":
+    {
+      "type": "string",
+      "metadata":
+      {
+        "Description": "The storage account where the PowerShell and DSC scripts are located"
+      },
+      "defaultValue": "https://apolinarsascripts.blob.core.windows.net/scripts/"
+    },
+
+    "networkResourceGroupName":
+    {
+      "type": "string"
+    },
+    "DC1IP":
+    {
+      "type": "string"
+    },
+    "DC2IP":
+    {
+      "type": "string"
+    },
+    "subnetName":
+    {
+      "type": "string"
+    },
+    "virtualNetworkName":
+    {
+      "type": "string"
+    },
+    "storageAccountName":
+    {
+      "type": "string",
+      "metadata":
+      {
+        "description": "The name of the storage account for the domain controllers"
+      }
+    },
+    "DCAvailabilitySetName":
+    {
+      "type": "string",
+      "metadata":
+      {
+        "description": "Availablity set name the domain controllers"
+      }
+    },
+    "DC1Name":
+    {
+      "type": "string"
+    },
+    "DC2Name":
+    {
+      "type": "string"
+    },
+    "DCVMSize":
+    {
+      "type": "string",
+      "allowedValues":
+      [
+        "Standard_A0",
+        "Standard_A1",
+        "Standard_A2",
+        "Standard_A3",
+        "Standard_A4",
+        "Standard_A5",
+        "Standard_A6",
+        "Standard_A7",
+        "Standard_A8",
+        "Standard_A9",
+        "Standard_A10",
+        "Standard_A11",
+        "Standard_D1",
+        "Standard_D2",
+        "Standard_D3",
+        "Standard_D4",
+        "Standard_D11",
+        "Standard_D12",
+        "Standard_D13",
+        "Standard_D14",
+        "Standard_D1_v2",
+        "Standard_D2_v2",
+        "Standard_D3_v2",
+        "Standard_D4_v2",
+        "Standard_D5_v2",
+        "Standard_D11_v2",
+        "Standard_D12_v2",
+        "Standard_D13_v2",
+        "Standard_D14_v2",
+        "Standard_DS1",
+        "Standard_DS2",
+        "Standard_DS3",
+        "Standard_DS4",
+        "Standard_DS11",
+        "Standard_DS12",
+        "Standard_DS13",
+        "Standard_DS14"
+      ]
+    },
+    "adminUsername":
+    {
+      "type": "string",
+      "metadata":
+      {
+        "description": "The Domain Admin Account username"
+      }
+    },
+    "adminPassword":
+    {
+      "type": "securestring",
+      "metadata":
+      {
+        "description": "The Domain Admin password"
+      }
+    },
+    "imagePublisher":
+    {
+      "type": "string",
+      "defaultValue": "MicrosoftWindowsServer",
+      "metadata":
+      {
+        "description": "Image Publisher"
+      }
+    },
+    "imageOffer":
+    {
+      "type": "string",
+      "defaultValue": "WindowsServer",
+      "metadata":
+      {
+        "description": "Image Offer"
+      }
+    },
+    "imageSKU":
+    {
+      "type": "string",
+      "defaultValue": "2012-R2-Datacenter",
+      "metadata":
+      {
+        "description": "Image SKU"
+      }
+    },
+    "storageAccountType":
+    {
+      "type": "string",
+      "allowedValues":
+      [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_RAGRS",
+        "Standard_ZRS",
+        "Premium_LRS"
+      ],
+      "metadata":
+      {
+        "description": "The type of the Storage Account created"
+      },
+      "defaultValue": "Standard_LRS"
+    },
+    "SASToken":
+    {
+      "type": "securestring"
+    }
+  },
+  "variables":
+  {
+    "storageApiVersion": "2015-06-15",
+    "vnetID": "[resourceId(parameters('networkResourceGroupName'),'Microsoft.Network/virtualNetworks',parameters('virtualNetworkName'))]",
+    "subnetRef": "[concat(variables('vnetID'),'/subnets/',parameters('subnetName'))]",
+    "DC1DataDisk": "[concat(parameters('DC1Name'),'DataDisk')]",
+    "DC2DataDisk": "[concat(parameters('DC1Name'),'DataDisk')]",
+    "DCDataDiskSize": 1000,
+    "DC1NicName": "[concat(parameters('DC1Name'),'nic')]",
+    "DC2NicName": "[concat(parameters('DC2Name'),'nic')]",
+    "DC1ConfigurationFunction": "CreateADPDC.ps1\\CreateADPDC",
+    "DC1ModulesURL": "[concat(parameters('assetLocation'),'CreateADPDC.ps1.zip')]",
+    "scriptsStorageAccountName": "apolinarsascripts",
+    "ScriptsAccountResourceGroup": "StorageTemplates",
+    "ScriptsStorageAccountID": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', variables('ScriptsAccountResourceGroup'), '/providers/', 'Microsoft.Storage/storageAccounts/', variables('ScriptsStorageAccountName'))]"
+  },
+  "resources":
+  [
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[parameters('DC1Name')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn":
+      [
+        "[resourceId('Microsoft.Storage/storageAccounts',parameters('StorageAccountName'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces',variables('DC1NicName'))]",
+        "[resourceId('Microsoft.Compute/availabilitySets', parameters('DCAvailabilitySetName'))]"
+      ],
+      "properties":
+      {
+        "hardwareProfile":
+        {
+          "vmSize": "[parameters('DCVMSize')]"
+        },
+        "availabilitySet":
+        {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('DCAvailabilitySetName'))]"
+        },
+        "osProfile":
+        {
+          "computerName": "[parameters('DC1Name')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile":
+        {
+          "imageReference":
+          {
+            "publisher": "[parameters('imagePublisher')]",
+            "offer": "[parameters('imageOffer')]",
+            "sku": "[parameters('imageSKU')]",
+            "version": "latest"
+          },
+          "osDisk":
+          {
+            "name": "osdisk",
+            "vhd":
+            {
+              "uri": "[concat('http://',parameters('StorageAccountName'),'.blob.core.windows.net/vhds/','osdisk.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          },
+          "dataDisks":
+          [
+            {
+              "vhd":
+              {
+                "uri": "[concat('http://',parameters('StorageAccountName'),'.blob.core.windows.net/vhds/', variables('DC1DataDisk'),'-1.vhd')]"
+              },
+              "name": "[concat(parameters('DC1Name'),'-data-disk1')]",
+              "caching": "None",
+              "diskSizeGB": "[variables('DCDataDiskSize')]",
+              "lun": 0,
+              "createOption": "empty"
+            }
+          ]
+        },
+        "networkProfile":
+        {
+          "networkInterfaces":
+          [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('DC1NicName'))]"
+            }
+          ]
+        }
+      },
+        "resources": [
+            {
+                "name": "[concat(parameters('DC1Name'))]",
+                "type": "extensions",
+                "location": "[resourceGroup().location]",
+                "apiVersion": "2015-06-15",
+                "dependsOn": [
+                    "[concat('Microsoft.Compute/virtualMachines/', parameters('DC1Name'))]"
+                ],
+                "tags": {
+                    "displayName": "CreateADForest"
+                },
+              "properties":
+              {
+                "publisher": "Microsoft.Powershell",
+                "type": "DSC",
+                "typeHandlerVersion": "2.11",
+                "autoUpgradeMinorVersion": true,
+                "settings":
+                {
+                  "ModulesUrl": "[variables('DC1ModulesURL')]",
+                  "ConfigurationFunction": "[variables('DC1ConfigurationFunction')]",
+                  "SasToken": "[parameters('SASToken')]",
+                  "Properties":
+                  {
+                    "DomainName": "[parameters('domainName')]",
+                    "AdminCreds":
+                    {
+                      "UserName": "[parameters('adminUserName')]",
+                      "Password": "PrivateSettingsRef:AdminPassword"
+                    }
+                  }
+                },
+                "protectedSettings":
+                {
+                  "Items":
+                  {
+                    "AdminPassword": "[parameters('adminPassword')]"
+                  }
+                }
+              }
+            }
+        ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[toLower(parameters('StorageAccountName'))]",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[resourceGroup().location]",
+      "properties":
+      {
+        "accountType": "[parameters('storageAccountType')]"
+      }
+    },
+    {
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "[parameters('DCAvailabilitySetName')]",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[resourceGroup().location]"
+    },
+
+    {
+      "name": "[variables('DC1NicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-06-15",
+      "tags":
+      {
+        "displayName": "NIC1"
+      },
+      "properties":
+      {
+        "ipConfigurations":
+        [
+          {
+            "name": "ipconfig1",
+            "properties":
+
+            {
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[parameters('DC1IP')]",
+              "subnet":
+              {
+                "id": "[variables('SubnetRef')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('DC2NicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-06-15",
+      "tags":
+      {
+        "displayName": "NIC2"
+      },
+      "properties":
+      {
+        "ipConfigurations":
+        [
+          {
+            "name": "ipconfig1",
+            "properties":
+
+            {
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[parameters('DC2IP')]",
+              "subnet":
+              {
+                "id": "[variables('SubnetRef')]"
+              }
+            }
+          }
+        ],
+        "dnsSettings":
+        {
+          "dnsServers": "[parameters('dnsServers')]"
+        }
+      }
+    }
+  ]
+}
