@@ -19,12 +19,12 @@
         "Description": "The FQDN of the AD Forest. e.g. Contoso.com"
       }
     },
-    "adSubnet":
+    /*"adSubnet":
     {
       "type": "string",
       "defaultValue": "192.168.89.0/24"
     },
-    /*
+    
     "vnetwithDNSTemplateUri":
     {
     "type": "string"
@@ -60,11 +60,11 @@
     {
       "type": "string"
     },
-    "virtualNetworkAddressRange":
+    /*"virtualNetworkAddressRange":
     {
       "type": "string",
       "defaultValue": "192.168.88.0/23"
-    },
+    },*/
 
     "storageAccountName":
     {
