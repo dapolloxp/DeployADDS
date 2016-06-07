@@ -43,12 +43,14 @@
       "apiVersion": "2015-05-01-preview",
       "properties": {
         "addressSpace": {
-          "addressPrefixes": [
+          "addressPrefixes":          
+          [
             "[parameters('virtualNetworkAddressRange')]"
           ]
         },
-        "dhcpOptions": {
-          "dnsServers": "[parameters('DNSServerAddress')]"
+        "dhcpOptions":        
+        {
+          "dnsServers": "[[parameters('DNSServerAddress')]]"
         },
         "subnets": [
           {
