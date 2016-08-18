@@ -19,7 +19,15 @@
         "Description": "The FQDN of the AD Forest. e.g. Contoso.com"
       }
     },
-
+    "virtualNetworkAddressRange":
+    {
+      "type": "string",
+      "metadata":
+      {
+        "description": "The address range of the new VNET in CIDR format"
+      },
+      "defaultValue": "192.168.88.0/23"
+    },
     "assetLocation":
     {
       "type": "string",
@@ -27,9 +35,17 @@
       {
         "Description": "The storage account where the PowerShell and DSC scripts are located"
       },
-      "defaultValue": "https://smbccmpocfiles.blob.core.windows.net/scripts/"
+      "defaultValue": "https://apolinarsascripts.blob.core.windows.net/scripts/"
     },
-
+    "adSubnet":
+    {
+      "type": "string",
+      "metadata":
+      {
+        "description": "The address range of the subnet created in the new VNET"
+      },
+      "defaultValue": "192.168.89.0/24"
+    },
     "networkResourceGroupName":
     {
       "type": "string"
@@ -38,7 +54,10 @@
     {
       "type": "string"
     },
-    
+    "DC2IP":
+    {
+      "type": "string"
+    },
     "subnetName":
     {
       "type": "string"
@@ -46,8 +65,7 @@
     "virtualNetworkName":
     {
       "type": "string"
-    },  
-
+    },
     "storageAccountName":
     {
       "type": "string",
@@ -65,6 +83,10 @@
       }
     },
     "DC1Name":
+    {
+      "type": "string"
+    },
+    "DC2Name":
     {
       "type": "string"
     },
@@ -186,10 +208,13 @@
     "DC2DataDisk": "[concat(parameters('DC1Name'),'DataDisk')]",
     "DCDataDiskSize": 1000,
     "DC1NicName": "[concat(parameters('DC1Name'),'nic')]",
+    "DC2NicName": "[concat(parameters('DC2Name'),'nic')]",
     "DC1ConfigurationFunction": "CreateADPDC.ps1\\CreateADPDC",
     "DC1ModulesURL": "[concat(parameters('assetLocation'),'CreateADPDC.ps1.zip')]",
-    "scriptsStorageAccountName": "smbccmpocfiles",
-    "ScriptsAccountResourceGroup": "SMBC-POC-Files",
+    "vnetwithDNSTemplateUri": "[concat(parameters('assetLocation'),'vnet-with-dns-server.json')]",
+    "scriptsStorageAccountName": "apolinarsascripts",
+    "ScriptsAccountResourceGroup": "StorageTemplates",
+    "vnetTemplateUri": "[concat(parameters('assetLocation'),'vnet.json')]",
     "ScriptsStorageAccountID": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', variables('ScriptsAccountResourceGroup'), '/providers/', 'Microsoft.Storage/storageAccounts/', variables('ScriptsStorageAccountName'))]"
   },
   "resources":
@@ -268,7 +293,7 @@
       "resources":
       [
         {
-          "name": "CreateADForest",
+          "name": "[concat(parameters('DC1Name'),'/CreateADForest')]",
           "type": "extensions",
           "location": "[resourceGroup().location]",
           "apiVersion": "2015-06-15",
@@ -289,7 +314,8 @@
             "settings":
             {
               "ModulesUrl": "[variables('DC1ModulesURL')]",
-              "ConfigurationFunction": "[variables('DC1ConfigurationFunction')]",              
+              "ConfigurationFunction": "[variables('DC1ConfigurationFunction')]",
+              "SasToken": "[parameters('SASToken')]",
               "Properties":
               {
                 "DomainName": "[parameters('domainName')]",
@@ -311,6 +337,62 @@
         }
       ]
     },
+    /*
+    //------------------------
+    {
+      "name": "UpdateVNetDNS",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn":
+      [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('DC1Name'),'/extensions/CreateADForest')]"
+      ],
+      "properties":
+      {
+        "mode": "Incremental",
+        "templateLink":
+        {
+          "uri": "[variables('vnetwithDNSTemplateUri')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters":
+        {
+          "virtualNetworkName":
+          {
+            "value": "[parameters('virtualNetworkName')]"
+          },
+          "virtualNetworkAddressRange":
+          {
+            "value": "[parameters('virtualNetworkAddressRange')]"
+          },
+          "subnetName":
+          {
+            "value": "[parameters('subnetName')]"
+          },
+          "subnetRange":
+          {
+            "value": "[parameters('adSubnet')]"
+          },
+          "DNSServerAddress":
+          {
+            "value":
+            [
+              "[parameters('dnsServers')]"
+            ]
+          },
+          "protectedSettings":
+          {
+            "storageAccountName": "[variables('scriptsStorageAccountName')]",
+            "storageAccountKey": "[listkeys(variables('accountid'), '2015-06-15').key1]",            
+            "storageAccountEndPoint": "https://core.windows.net"
+          }
+        }
+      }
+    },
+    */
+
+    //------------------------
+
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[toLower(parameters('StorageAccountName'))]",
@@ -327,7 +409,7 @@
       "apiVersion": "2015-05-01-preview",
       "location": "[resourceGroup().location]"
     },
-    
+
     {
       "name": "[variables('DC1NicName')]",
       "type": "Microsoft.Network/networkInterfaces",
@@ -356,6 +438,39 @@
           }
         ]
       }
+    },
+    {
+      "name": "[variables('DC2NicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-06-15",
+      "tags":
+      {
+        "displayName": "NIC2"
+      },
+      "properties":
+      {
+        "ipConfigurations":
+        [
+          {
+            "name": "ipconfig1",
+            "properties":
+
+            {
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[parameters('DC2IP')]",
+              "subnet":
+              {
+                "id": "[variables('SubnetRef')]"
+              }
+            }
+          }
+        ],
+        "dnsSettings":
+        {
+          "dnsServers": "[parameters('dnsServers')]"
+        }
+      }
     }
-    ]
-  }
+  ]
+}

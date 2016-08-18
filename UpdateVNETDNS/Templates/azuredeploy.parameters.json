@@ -4,51 +4,43 @@
     "parameters": {
 
 
-      "networkResourceGroupName":      
+      "networkResourceGroupName":
       {
-        "value": "VMSS-ILB-Linux"
+        "value": "Markit-POC-Isolated"
       },
         
         "subnetName": {
-            "value": "dapolinuxsubnet"
+            "value": "Subnet-1"
         },
         "virtualNetworkName": {
-            "value": "AzureUSNCVNet2"
+            "value": "Markit_POC_Isolated"
         },
         "dnsServers": {
             "value": [
-                "192.168.89.223",
-                "192.168.1.219"
+                "192.168.1.4"
             ]
-        },
-        
+        },        
         "DC1IP": {
-            "value": "192.168.89.223"
-        },
+            "value": "192.168.1.4"
+        },       
         
-        "DC2IP": {
-            "value": "192.168.89.224"
-        },
         "storageAccountName": {
-            "value": "dapolsaacount3"
+            "value": "smbccmmarkitpocsa1"
         },
         "DCAvailabilitySetName": {
             "value": "dcas1"
         },
         "DC1Name": {
-            "value": "dapoldomainc1"
+            "value": "MarkitPOCDC1"
         },
         "DCVMSize": {
             "value": "Standard_D1_v2"
         },
         "adminUsername": {
-            "value": "x-admin"
-        },
-        "DC2Name": {
-            "value": "dapoldomainc2"
-        },
+            "value": "pocadmin"
+        },        
         "domainName": {
-            "value": "contoso.org"
+            "value": "smbc-cm-markit.poc"
         }
     }
 }
